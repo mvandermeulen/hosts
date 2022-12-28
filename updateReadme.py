@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Script by Steven Black
 # https://github.com/StevenBlack
@@ -12,23 +12,24 @@ from string import Template
 
 # Project Settings
 BASEDIR_PATH = os.path.dirname(os.path.realpath(__file__))
-README_TEMPLATE = os.path.join(BASEDIR_PATH, 'readme_template.md')
-README_FILENAME = 'readme.md'
+README_TEMPLATE = os.path.join(BASEDIR_PATH, "readme_template.md")
+README_FILENAME = "readme.md"
 README_DATA_FILENAME = "readmeData.json"
 
 
 def main():
-    s = Template('${description} | [Readme](https://github.com/StevenBlack/'
-                 'hosts/blob/master/${location}readme.md) | '
-                 '[link](https://raw.githubusercontent.com/StevenBlack/'
-                 'hosts/master/${location}hosts) | '
-                 '${fmtentries} | '
-                 '[link](http://sbc.io/hosts/${location}hosts)')
-    with open(README_DATA_FILENAME, 'r') as f:
+    s = Template(
+        "${description} | [Readme](https://github.com/StevenBlack/"
+        "hosts/blob/master/${location}readme.md) | "
+        "[link](https://raw.githubusercontent.com/StevenBlack/"
+        "hosts/master/${location}hosts) | "
+        "${fmtentries} | "
+        "[link](http://sbc.io/hosts/${location}hosts)"
+    )
+    with open(README_DATA_FILENAME, "r", encoding="utf-8", newline="\n") as f:
         data = json.load(f)
 
     keys = list(data.keys())
-
     # Sort by the number of en-dashes in the key
     # and then by the key string itself.
     keys.sort(key=lambda item: (item.count("-"), item))
@@ -37,26 +38,31 @@ def main():
     for key in keys:
         data[key]["fmtentries"] = "{:,}".format(data[key]["entries"])
         if key == "base":
-            data[key]["description"] = 'Unified hosts = **(adware + malware)**'
+            data[key]["description"] = "Unified hosts = **(adware + malware)**"
         else:
-            data[key]["description"] = ('Unified hosts **+ ' +
-                                        key.replace("-", " + ") + '**')
+            data[key]["description"] = (
+                "Unified hosts **+ " + key.replace("-", " + ") + "**"
+            )
+
+        if "\\" in data[key]["location"]:
+            data[key]["location"] = data[key]["location"].replace("\\", "/")
 
         toc_rows += s.substitute(data[key]) + "\n"
 
     row_defaults = {
         "name": "",
-        "description": "",
         "homeurl": "",
-        "frequency": "",
-        "issues": "",
         "url": "",
         "license": "",
-        "issues": ""}
+        "issues": "",
+        "description": "",
+    }
 
-    t = Template('${name} | ${description} |[link](${homeurl})'
-                 ' | [raw](${url}) | ${frequency} | ${license}  | [issues](${issues}) ')
-
+    t = Template(
+        "${name} |[link](${homeurl})"
+        " | [raw](${url}) | ${license} | [issues](${issues})| ${description}"
+    )
+    size_history_graph = "![Size history](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts_file_size_history.png)"
     for key in keys:
         extensions = key.replace("-", ", ")
         extensions_str = "* Extensions: **" + extensions + "**."
@@ -71,16 +77,34 @@ def main():
             this_row.update(source)
             source_rows += t.substitute(this_row) + "\n"
 
-        with open(os.path.join(data[key]["location"],
-                               README_FILENAME), "wt") as out:
-            for line in open(README_TEMPLATE):
-                line = line.replace('@GEN_DATE@', time.strftime("%B %d %Y", time.gmtime()))
-                line = line.replace('@EXTENSIONS@', extensions_str)
-                line = line.replace('@EXTENSIONS_HEADER@', extensions_header)
-                line = line.replace('@NUM_ENTRIES@', "{:,}".format(data[key]["entries"]))
-                line = line.replace('@SUBFOLDER@', os.path.join(data[key]["location"], ''))
-                line = line.replace('@TOCROWS@', toc_rows)
-                line = line.replace('@SOURCEROWS@', source_rows)
+        with open(
+            os.path.join(data[key]["location"], README_FILENAME),
+            "wt",
+            encoding="utf-8",
+            newline="\n",
+        ) as out:
+            for line in open(README_TEMPLATE, encoding="utf-8", newline="\n"):
+                line = line.replace(
+                    "@GEN_DATE@", time.strftime("%B %d %Y", time.gmtime())
+                )
+                line = line.replace("@EXTENSIONS@", extensions_str)
+                line = line.replace("@EXTENSIONS_HEADER@", extensions_header)
+                line = line.replace(
+                    "@NUM_ENTRIES@", "{:,}".format(data[key]["entries"])
+                )
+                line = line.replace(
+                    "@SUBFOLDER@", os.path.join(data[key]["location"], "")
+                )
+                line = line.replace("@TOCROWS@", toc_rows)
+                line = line.replace("@SOURCEROWS@", source_rows)
+                # insert the size graph on the home readme only, for now.
+                if key == "base":
+                    line = line.replace(
+                        "@SIZEHISTORY@", size_history_graph
+                    )
+                else:
+                    line = line.replace("@SIZEHISTORY@", "")
+
                 out.write(line)
 
 
